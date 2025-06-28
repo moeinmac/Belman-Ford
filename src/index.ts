@@ -1,76 +1,77 @@
-interface Graph {
-  distances: {
-    [key: string]: number;
-  };
-  predecessors: {
-    [key: string]: string | null;
-  };
-}
-
 class Graph {
-  #G = new Map();
-  constructor() {
+  private readonly G = new Map();
+  private readonly trafficVolume: { light: number; medium: number; heavy: number };
+  private readonly predecessors: { [key: string]: string | null };
+  public readonly distances: { [key: string]: number };
+
+  constructor(trafficVolume: { light: number; medium: number; heavy: number } = { heavy: 5, light: 1.5, medium: 2 }) {
     this.distances = {};
+    this.trafficVolume = trafficVolume;
     this.predecessors = {};
   }
-  addVertex(v: string) {
-    if (!this.#G.has(v)) this.#G.set(v, []);
+  private justAddVertex(v: string) {
+    if (!this.G.has(v)) this.G.set(v, []);
     else throw new Error(`${v} is in Graph already!`);
   }
-  addEdge(u: string, v: string, distance: number, traffic: "none" | "light" | "medium" | "heavy" = "none") {
-    if (this.#G.has(u) && this.#G.has(v)) {
+  public addVertex(v: string | string[]) {
+    if (typeof v === "string") this.justAddVertex(v);
+    else if (Array.isArray(v)) for (const theV of v) this.justAddVertex(theV);
+    else throw new Error("Vertex must be string or Array of string.");
+  }
+  public addEdge(u: string, v: string, distance: number, traffic: "none" | "light" | "medium" | "heavy" = "none") {
+    if (this.G.has(u) && this.G.has(v)) {
       switch (traffic) {
         case "none":
-          this.#G.get(u).push(`${v}::${distance}`);
+          this.G.get(u).push(`${v}::${distance}`);
           break;
         case "light":
-          this.#G.get(u).push(`${v}::${distance * 1.5}`);
+          this.G.get(u).push(`${v}::${distance * this.trafficVolume.light}`);
           break;
         case "medium":
-          this.#G.get(u).push(`${v}::${distance * 2}`);
+          this.G.get(u).push(`${v}::${distance * this.trafficVolume.medium}`);
           break;
         case "heavy":
-          this.#G.get(u).push(`${v}::${distance * 5}`);
+          this.G.get(u).push(`${v}::${distance * this.trafficVolume.heavy}`);
           break;
         default:
           throw new Error(' please use one if these values : "none" | "light" | "medium" | "heavy"');
       }
     } else throw new Error(`there is'nt ${v} or ${u} in the Graph`);
   }
-  log() {
-    return this.#G;
+  public log() {
+    return this.G;
   }
-  #initBF(source: string) {
-    for (const vertex of this.#G.keys()) {
+  private initBF(source: string) {
+    for (const vertex of this.G.keys()) {
       if (vertex == source) this.distances[vertex] = 0;
       else this.distances[vertex] = Infinity;
     }
-    for (const vertex of this.#G.keys()) this.predecessors[vertex] = null;
+    for (const vertex of this.G.keys()) this.predecessors[vertex] = null;
   }
-  #relax(u: string, v: string, w: number) {
+  private relax(u: string, v: string, w: number) {
     if (this.distances[v] > this.distances[u] + w) {
       this.distances[v] = this.distances[u] + w;
       this.predecessors[v] = u;
     }
   }
-  BelmanFord(source: string) {
-    this.#initBF(source);
-    for (const vertex of this.#G.entries()) {
+  public BelmanFord(source: string) {
+    this.initBF(source);
+    for (const vertex of this.G.entries()) {
       for (const edge of vertex[1]) {
         const splitEdge: [string, number] = edge.split("::");
-        this.#relax(vertex[0], splitEdge[0], +splitEdge[1]);
+        this.relax(vertex[0], splitEdge[0], +splitEdge[1]);
       }
     }
   }
-  #recursiveFindPath(dist: string, seenPath: string[] = []): string[] {
+  private recursiveFindPath(dist: string, seenPath: string[] = []): string[] {
     if (this.predecessors[dist] === null) return seenPath;
     seenPath.unshift(this.predecessors[dist]);
-    return this.#recursiveFindPath(this.predecessors[dist], seenPath);
+    return this.recursiveFindPath(this.predecessors[dist], seenPath);
   }
-  findShortestPath(source: string, dist: string) {
-    if (this.#G.has(source) && this.#G.has(dist)) {
+  public findShortestPath(source: string, dist: string) {
+    if (this.G.has(source) && this.G.has(dist)) {
       this.BelmanFord(source);
-      const thePath = this.#recursiveFindPath(dist, []);
+      const thePath = this.recursiveFindPath(dist, []);
       if (thePath.length === 0) throw new Error(`could not go from ${source} to ${dist}`);
       else {
         thePath.push(dist);
@@ -94,14 +95,11 @@ graph1.addVertex("T");
 graph1.addVertex("E");
 graph1.addVertex("R");
 graph1.addVertex("F");
-graph1.addVertex("Y");
-graph1.addVertex("W");
-graph1.addVertex("P");
-graph1.addVertex("K");
+graph1.addVertex(["Y", "W", "K", "P"]);
 
 graph1.addEdge("S", "A", 5, "light");
 graph1.addEdge("S", "B", 7, "heavy");
-graph1.addEdge("S", "C", 10, "medium");
+graph1.addEdge("S", "C", 10, "none");
 
 graph1.addEdge("B", "Q", 6, "heavy");
 
@@ -151,4 +149,5 @@ graph1.addEdge("K", "P", 6, "none");
 
 graph1.addEdge("P", "S", 10, "none");
 
-console.log(graph1.findShortestPath("S", "E"));
+console.log(graph1.log());
+console.log(graph1.findShortestPath("S", "F"));
