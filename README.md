@@ -1,5 +1,11 @@
 # Bellman-Ford Shortest Path with Traffic Consideration
 
+<div align="center">
+
+![](sample_city_data.png)
+
+</div>
+
 This project implements a modified version of the **Bellman-Ford algorithm** to find the shortest path between two points in a graph, where each edge may include an additional attribute: **traffic level**.
 
 ## 🚦 Key Features
